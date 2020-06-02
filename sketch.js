@@ -4,6 +4,9 @@ var origin_x;
 var origin_y;
 
 var time;
+var prev_time;
+var skip_rate;
+var season;
 
 var cube_dim;
 
@@ -39,6 +42,11 @@ function setup(){
 	createCanvas(768, 768, WEBGL);
 
 	perspective(PI/3, 1, 1, 100);
+
+	time = 1;
+	prev_time = time;
+	skip_rate = 2000;
+	season = 0;
 	
 	grid = [];
 	grid_dim = 64*4;
@@ -80,9 +88,8 @@ function setup(){
 }
 
 function draw(){
-	//get the current sky color and set it to the bg
-	let sky_color = p5.Vector.lerp(day_color, night_color, (sin(frameCount/100)+1)/2);
-	background(sky_color.x, sky_color.y, sky_color.z);
+	//calculates all time based stuff
+	handle_time();
 
 	//get all user input
 	handle_input();
@@ -197,3 +204,58 @@ function handle_input(){
 		}
 	}
 }
+
+function handle_time(){
+	//assuming 40fps
+	time += skip_rate;
+
+	let day_length = 15;
+	let season_length = 21;
+
+	//check if the season has changed
+	if(time%(40*60*day_length*season_length) < prev_time%(40*60*day_length*season_length)){
+		season++;
+		season %= 4;
+		console.log(season);
+	}
+
+	//get the current sky color and set it to the bg
+	let sky_color = p5.Vector.lerp(day_color, night_color, (sin(map(time%(40*60*day_length), 0, 40*60*day_length, 0, 2*PI))+1)/2);
+	background(sky_color.x, sky_color.y, sky_color.z);
+
+	//set the foliage color for the current season
+	let cur_color;
+	let next_color;
+	switch(season){
+		case 0:
+			cur_color = spring_color;
+			next_color = summer_color;
+			break;
+		case 1:
+			cur_color = summer_color;
+			next_color = fall_color;
+			break;
+		case 2:
+			cur_color = fall_color;
+			next_color = winter_color;
+			break;
+		case 3:
+			cur_color = winter_color;
+			next_color = spring_color;
+			break;
+	}
+	foliage_color = p5.Vector.lerp(cur_color, next_color, map(time%(40*60*day_length*season_length), 0, 40*60*day_length*season_length, 0, 1));
+
+	//used to keep track of when a modulus rollover happens (ie knowing when the season changes)
+	prev_time = time;
+}
+
+
+
+
+
+
+
+
+
+
