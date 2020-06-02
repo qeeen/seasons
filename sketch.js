@@ -6,6 +6,7 @@ var origin_y;
 var time;
 var prev_time;
 var skip_rate;
+var skip_slider;
 var season;
 
 var cube_dim;
@@ -39,14 +40,18 @@ function preload(){
 	bark = loadImage('treesBARK.png');
 }
 function setup(){
-	createCanvas(768, 768, WEBGL);
+	let canv = createCanvas(768, 768, WEBGL);
 
 	perspective(PI/3, 1, 1, 100);
 
 	time = 1;
 	prev_time = time;
-	skip_rate = 2000;
+	skip_rate = 1;
 	season = 0;
+
+	skip_slider = createSlider(1, 5000, 1);
+	skip_slider.style('width', '200px');
+	skip_slider.position(canv.position().x+100, canv.position().y);
 	
 	grid = [];
 	grid_dim = 64*4;
@@ -83,6 +88,9 @@ function setup(){
 	for(let i = 0; i < grid_dim; ++i){
 		for(let k = 0; k < grid_dim; ++k){
 			grid[i][k] = Math.floor(random(10))==0;
+			if(grid[i][k]){
+				grid[i][k] = random(0.3, 1.2);
+			}
 		}
 	}
 }
@@ -120,38 +128,45 @@ function draw(){
 			if(Math.abs(i*cube_dim - (user_x-origin_x)) > view_range || Math.abs(k*cube_dim - (user_y-origin_y)) > view_range){
 				continue;
 			}
-			if(grid[i][k]){
+			if(grid[i][k] > 0){
 				push();
+
+				//ranges from 0.3 to 1.2
+				grid[i][k] += 0.0000001*skip_rate;
+				if(grid[i][k] > 1.2)
+					grid[i][k] = 1.2;
+				let scle = grid[i][k];
 
 				translate(origin_x + i*cube_dim, origin_y + k*cube_dim, 0)
 				rotateX(radians(90));
+				scale(scle);
 
 				push();
-				translate(0, -4.5, 0);
+				translate(0, -4.5/scle + (12.5 - 12.5*scle)/scle, 0);
 				texture(bark);
 				cylinder(cube_dim/4, 25);
 				pop();
 
 				texture(leaf_tex);
 				push();
-				translate(0, -25, 0);
+				translate(0, -25*scle, 0);
 				sphere(cube_dim/2);
 				pop();
 
 				push();
-				translate(5, -18, 5);
+				translate(5*scle, -18*scle, 5*scle);
 				sphere(cube_dim/2);
 				pop();
 				push();
-				translate(-5, -18, 5);
+				translate(-5*scle, -18*scle, 5*scle);
 				sphere(cube_dim/2);
 				pop();
 				push();
-				translate(-5, -18, -5);
+				translate(-5*scle, -18*scle, -5*scle);
 				sphere(cube_dim/2);
 				pop();
 				push();
-				translate(5, -18, -5);
+				translate(5*scle, -18*scle, -5*scle);
 				sphere(cube_dim/2);
 				pop();
 
@@ -199,13 +214,17 @@ function handle_input(){
 				break;	
 			if(gridposx > grid_dim || gridposx < 0 || gridposy > grid_dim || gridposy < 0)
 				break;
-			if(grid[gridposx][gridposy] == 1)
-				grid[gridposx][gridposy] = 0;
+			if(grid[gridposx][gridposy] == 0){
+				grid[gridposx][gridposy] = 0.3;
+				break;
+			}
 		}
 	}
 }
 
 function handle_time(){
+	skip_rate = skip_slider.value();
+	
 	//assuming 40fps
 	time += skip_rate;
 
@@ -216,11 +235,10 @@ function handle_time(){
 	if(time%(40*60*day_length*season_length) < prev_time%(40*60*day_length*season_length)){
 		season++;
 		season %= 4;
-		console.log(season);
 	}
 
 	//get the current sky color and set it to the bg
-	let sky_color = p5.Vector.lerp(day_color, night_color, (sin(map(time%(40*60*day_length), 0, 40*60*day_length, 0, 2*PI))+1)/2);
+	let sky_color = p5.Vector.lerp(day_color, night_color, (-cos(map(time%(40*60*day_length), 0, 40*60*day_length, 0, 2*PI))+1)/2);
 	background(sky_color.x, sky_color.y, sky_color.z);
 
 	//set the foliage color for the current season
